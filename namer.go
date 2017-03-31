@@ -5,7 +5,9 @@
 package sqlexp
 
 import (
+	"context"
 	"database/sql/driver"
+	"errors"
 )
 
 const (
@@ -16,9 +18,9 @@ const (
 	DialectOracle   = "oracle"
 )
 
-// DriverNamer returns the name of the database and the SQL dialect it
+// Namer returns the name of the database and the SQL dialect it
 // uses.
-type DriverNamer interface {
+type Namer interface {
 	// Name of the database management system.
 	//
 	// Examples:
@@ -31,9 +33,19 @@ type DriverNamer interface {
 	Dialect() string
 }
 
+// DriverNamer may be implemented on the driver.Driver interface.
+// It may need to request information from the server to return
+// the correct information.
+type DriverNamer interface {
+	Namer(ctx context.Context) (Namer, error)
+}
+
 // NamerFromDriver returns the DriverNamer from the Driver if
 // it is implemented.
-func NamerFromDriver(d driver.Driver) DriverNamer {
-	dn, _ := d.(DriverNamer)
-	return dn
+func NamerFromDriver(d driver.Driver, ctx context.Context) (Namer, error) {
+	dn, is := d.(DriverNamer)
+	if !is {
+		return nil, errors.New("namer not found")
+	}
+	return dn.Namer(ctx)
 }

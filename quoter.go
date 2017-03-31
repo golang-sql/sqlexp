@@ -5,7 +5,9 @@
 package sqlexp
 
 import (
+	"context"
 	"database/sql/driver"
+	"errors"
 	"reflect"
 	"strings"
 )
@@ -27,24 +29,27 @@ type Quoter interface {
 
 // DriverQuoter returns a Quoter interface and is suitable for extending
 // the driver.Driver type.
+//
+// The driver may need to hit the database to determine how it is configured to
+// ensure the correct escaping rules are used.
 type DriverQuoter interface {
-	Quoter() Quoter
+	Quoter(ctx context.Context) (Quoter, error)
 }
 
 // QuoterFromDriver takes a database driver, often obtained through a sql.DB.Driver
 // call or from using it directly to get the quoter interface.
 //
 // Currently MssqlDriver is hard-coded to also return a valided Quoter.
-func QuoterFromDriver(d driver.Driver) Quoter {
+func QuoterFromDriver(d driver.Driver, ctx context.Context) (Quoter, error) {
 	if q, is := d.(DriverQuoter); is {
-		return q.Quoter()
+		return q.Quoter(ctx)
 	}
 	dv := reflect.ValueOf(d)
 	switch dv.Type().String() {
 	default:
-		return nil
+		return nil, errors.New("quoter interface not found")
 	case "*mssql.MssqlDriver":
-		return sqlServerQuoter{}
+		return sqlServerQuoter{}, nil
 	}
 }
 

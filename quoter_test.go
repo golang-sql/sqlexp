@@ -1,6 +1,7 @@
 package sqlexp
 
 import (
+	"context"
 	"database/sql/driver"
 	"testing"
 
@@ -8,10 +9,11 @@ import (
 )
 
 func TestMSSQL(t *testing.T) {
+	ctx := context.Background()
 	var driver driver.Driver = &ms.MssqlDriver{}
-	q := FromDriver(driver)
-	if q == nil {
-		t.Fatal("failed to get driver")
+	q, err := QuoterFromDriver(driver, ctx)
+	if err != nil {
+		t.Fatal("failed to get driver", err)
 	}
 
 	qs := q.Value("It's")
