@@ -31,11 +31,11 @@ type DriverQuoter interface {
 	Quoter() Quoter
 }
 
-// FromDriver takes a database driver, often obtained through a sql.DB.Driver
+// QuoterFromDriver takes a database driver, often obtained through a sql.DB.Driver
 // call or from using it directly to get the quoter interface.
 //
 // Currently MssqlDriver is hard-coded to also return a valided Quoter.
-func FromDriver(d driver.Driver) Quoter {
+func QuoterFromDriver(d driver.Driver) Quoter {
 	if q, is := d.(DriverQuoter); is {
 		return q.Quoter()
 	}

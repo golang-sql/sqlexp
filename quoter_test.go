@@ -17,6 +17,6 @@ func TestMSSQL(t *testing.T) {
 	qs := q.Value("It's")
 	wanted := "'It''s'"
 	if qs != wanted {
-		t.Error("quote value failed: got %s wanted %s", qs, wanted)
+		t.Errorf("quote value failed: got %s wanted %s", qs, wanted)
 	}
 }
