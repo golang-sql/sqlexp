@@ -9,8 +9,9 @@ import (
 	"database/sql/driver"
 	"errors"
 	"reflect"
-	"strings"
 )
+
+// BUG(kardianos): Both the Quoter and Namer may need to access the server.
 
 // Quoter returns safe and valid SQL strings to use when building a SQL text.
 type Quoter interface {
@@ -45,24 +46,12 @@ func QuoterFromDriver(d driver.Driver, ctx context.Context) (Quoter, error) {
 		return q.Quoter(ctx)
 	}
 	dv := reflect.ValueOf(d)
-	switch dv.Type().String() {
-	default:
-		return nil, errors.New("quoter interface not found")
-	case "*mssql.MssqlDriver":
-		return sqlServerQuoter{}, nil
-	}
-}
 
-type sqlServerQuoter struct{}
-
-func (sqlServerQuoter) ID(name string) string {
-	return "[" + strings.Replace(name, "]", "]]", -1) + "]"
-}
-func (sqlServerQuoter) Value(v interface{}) string {
-	switch v := v.(type) {
-	default:
-		panic("unsupported value")
-	case string:
-		return "'" + strings.Replace(v, "'", "''", -1) + "'"
+	d, found := internalDrivers[dv.Type().String()]
+	if found {
+		if q, is := d.(DriverQuoter); is {
+			return q.Quoter(ctx)
+		}
 	}
+	return nil, errors.New("quoter interface not found")
 }

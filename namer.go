@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
+	"reflect"
 )
 
 const (
@@ -40,12 +41,19 @@ type DriverNamer interface {
 	Namer(ctx context.Context) (Namer, error)
 }
 
-// NamerFromDriver returns the DriverNamer from the Driver if
+// NamerFromDriver returns the DriverNamer from the DB if
 // it is implemented.
 func NamerFromDriver(d driver.Driver, ctx context.Context) (Namer, error) {
-	dn, is := d.(DriverNamer)
-	if !is {
-		return nil, errors.New("namer not found")
+	if q, is := d.(DriverNamer); is {
+		return q.Namer(ctx)
 	}
-	return dn.Namer(ctx)
+	dv := reflect.ValueOf(d)
+
+	d, found := internalDrivers[dv.Type().String()]
+	if found {
+		if q, is := d.(DriverNamer); is {
+			return q.Namer(ctx)
+		}
+	}
+	return nil, errors.New("namer not found")
 }
